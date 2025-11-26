@@ -19,7 +19,47 @@ class DinDinApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      home: const HomePage(),
+
+      // AGORA COMEÇA PELA SPLASH
+      home: const SplashScreen(),
+    );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.monetization_on, size: 80, color: Colors.blue),
+            SizedBox(height: 20),
+            Text("DinDin", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -30,6 +70,11 @@ class HomePage extends StatefulWidget {
   @override
   State<HomePage> createState() => _HomePageState();
 }
+
+// =============================================
+// TODO O RESTO DO SEU CÓDIGO ORIGINAL CONTINUA AQUI
+// SEM ALTERAR NADA
+// =============================================
 
 class _HomePageState extends State<HomePage> {
   final List<Map<String, dynamic>> lancamentos = [];
@@ -124,7 +169,6 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Column(
         children: [
-          // SALDO E TOTAL
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -156,7 +200,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          // FILTROS E GRÁFICO
+          
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -186,14 +230,16 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
+
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: _buildGrafico(),
             ),
           ),
+
           const Divider(height: 1),
-          // LISTA DE LANÇAMENTOS
+
           Expanded(
             child: listaFiltrada.isEmpty
                 ? const Center(child: Text('Nenhum lançamento encontrado.'))
@@ -278,6 +324,7 @@ class _HomePageState extends State<HomePage> {
             centerSpaceRadius: 30,
           ),
         );
+
       case 'Barra':
         return BarChart(
           BarChartData(
@@ -310,6 +357,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         );
+
       case 'Linha':
         return LineChart(
           LineChartData(
@@ -343,6 +391,7 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         );
+
       default:
         return const Center(child: Text('Tipo de gráfico inválido'));
     }
