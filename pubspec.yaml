@@ -1,16 +1,18 @@
 name: dindin
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0
 
 environment:
   sdk: ^3.9.2
 
-
 dependencies:
   flutter:
     sdk: flutter
   fl_chart: ^0.69.0
+  flutter_launcher_icons: ^0.14.4
+  shared_preferences: ^2.2.15
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -18,3 +20,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/logo.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"

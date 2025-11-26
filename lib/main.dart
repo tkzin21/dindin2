@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 void main() {
   runApp(const DinDinApp());
@@ -39,12 +41,55 @@ class _HomePageState extends State<HomePage> {
   final tiposGraficos = ['Pizza', 'Barra', 'Linha'];
 
   @override
+  void initState() {
+    super.initState();
+    _carregarLancamentos();
+  }
+
+  Future<void> _carregarLancamentos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? jsonString = prefs.getString('lancamentos');
+    if (jsonString != null) {
+      final List loaded = jsonDecode(jsonString);
+      setState(() {
+        lancamentos.addAll(List<Map<String, dynamic>>.from(loaded));
+      });
+    }
+  }
+
+  Future<void> _salvarLancamentos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String jsonString = jsonEncode(lancamentos);
+    await prefs.setString('lancamentos', jsonString);
+  }
+
+  void _adicionarLancamento(Map<String, dynamic> lancamento) {
+    setState(() {
+      lancamentos.add(lancamento);
+    });
+    _salvarLancamentos();
+  }
+
+  void _editarLancamento(int index, Map<String, dynamic> lancamento) {
+    setState(() {
+      lancamentos[index] = lancamento;
+    });
+    _salvarLancamentos();
+  }
+
+  void _excluirLancamento(int index) {
+    setState(() {
+      lancamentos.removeAt(index);
+    });
+    _salvarLancamentos();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final listaFiltrada = filtroCategoria == 'Todas'
         ? lancamentos
         : lancamentos.where((l) => l['categoria'] == filtroCategoria).toList();
 
-    // -------------------- CÁLCULOS --------------------
     double total = 0;
     double totalReceitas = 0;
     double totalDespesas = 0;
@@ -72,15 +117,14 @@ class _HomePageState extends State<HomePage> {
             MaterialPageRoute(builder: (_) => const AddLancamentoPage()),
           );
           if (novo != null && novo is Map<String, dynamic>) {
-            setState(() => lancamentos.add(novo));
+            _adicionarLancamento(novo);
           }
         },
         child: const Icon(Icons.add),
       ),
-
       body: Column(
         children: [
-          // ---------------- SALDO E TOTAL ----------------
+          // SALDO E TOTAL
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -112,15 +156,14 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-
-          // ---------- FILTROS E TIPO DE GRÁFICO ----------
+          // FILTROS E GRÁFICO
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: filtroCategoria,
+                    initialValue: filtroCategoria,
                     items: categorias
                         .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                         .toList(),
@@ -132,7 +175,7 @@ class _HomePageState extends State<HomePage> {
                 SizedBox(
                   width: 160,
                   child: DropdownButtonFormField<String>(
-                    value: tipoGrafico,
+                    initialValue: tipoGrafico,
                     items: tiposGraficos
                         .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                         .toList(),
@@ -143,8 +186,6 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-
-          // ---------------- GRÁFICO ----------------
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -152,8 +193,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           const Divider(height: 1),
-
-          // ---------------- LISTA ----------------
+          // LISTA DE LANÇAMENTOS
           Expanded(
             child: listaFiltrada.isEmpty
                 ? const Center(child: Text('Nenhum lançamento encontrado.'))
@@ -161,10 +201,38 @@ class _HomePageState extends State<HomePage> {
                     itemCount: listaFiltrada.length,
                     itemBuilder: (context, index) {
                       final l = listaFiltrada[index];
+                      final originalIndex = lancamentos.indexOf(l);
                       return ListTile(
                         title: Text(l['descricao'] ?? ''),
                         subtitle: Text('Categoria: ${l['categoria'] ?? ''}  |  ${l['tipo']}'),
-                        trailing: Text(
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () async {
+                                final edit = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => AddLancamentoPage(
+                                      lancamento: l,
+                                    ),
+                                  ),
+                                );
+                                if (edit != null && edit is Map<String, dynamic>) {
+                                  _editarLancamento(originalIndex, edit);
+                                }
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () {
+                                _excluirLancamento(originalIndex);
+                              },
+                            ),
+                          ],
+                        ),
+                        leading: Text(
                           'R\$ ${(l['valor'] as double).toStringAsFixed(2)}',
                           style: TextStyle(
                             color: (l['valor'] as double) >= 0 ? Colors.green : Colors.red,
@@ -179,9 +247,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ---------------------------------------------------
-  //                      GRÁFICOS
-  // ---------------------------------------------------
   Widget _buildGrafico() {
     final Map<String, double> dados = {};
 
@@ -191,15 +256,12 @@ class _HomePageState extends State<HomePage> {
       dados[cat] = (dados[cat] ?? 0) + val.abs();
     }
 
-    if (dados.isEmpty) {
-      return const Center(child: Text('Sem dados para o gráfico'));
-    }
+    if (dados.isEmpty) return const Center(child: Text('Sem dados para o gráfico'));
 
     final categoriasList = dados.keys.toList();
     final valores = dados.values.toList();
 
     switch (tipoGrafico) {
-      // ------------ PIZZA ------------
       case 'Pizza':
         return PieChart(
           PieChartData(
@@ -216,8 +278,6 @@ class _HomePageState extends State<HomePage> {
             centerSpaceRadius: 30,
           ),
         );
-
-      // ------------ BARRA ------------
       case 'Barra':
         return BarChart(
           BarChartData(
@@ -241,8 +301,8 @@ class _HomePageState extends State<HomePage> {
                     final idx = value.toInt();
                     if (idx < 0 || idx >= categoriasList.length) return const SizedBox.shrink();
                     return SideTitleWidget(
-                      child: Text(categoriasList[idx], style: const TextStyle(fontSize: 10)),
                       axisSide: meta.axisSide,
+                      child: Text(categoriasList[idx], style: const TextStyle(fontSize: 10)),
                     );
                   },
                 ),
@@ -250,8 +310,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         );
-
-      // ------------ LINHA ------------
       case 'Linha':
         return LineChart(
           LineChartData(
@@ -264,8 +322,8 @@ class _HomePageState extends State<HomePage> {
                     final idx = value.toInt();
                     if (idx < 0 || idx >= categoriasList.length) return const SizedBox.shrink();
                     return SideTitleWidget(
-                      child: Text(categoriasList[idx], style: const TextStyle(fontSize: 10)),
                       axisSide: meta.axisSide,
+                      child: Text(categoriasList[idx], style: const TextStyle(fontSize: 10)),
                     );
                   },
                 ),
@@ -285,7 +343,6 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         );
-
       default:
         return const Center(child: Text('Tipo de gráfico inválido'));
     }
@@ -293,15 +350,16 @@ class _HomePageState extends State<HomePage> {
 }
 
 class AddLancamentoPage extends StatefulWidget {
-  const AddLancamentoPage({super.key});
+  final Map<String, dynamic>? lancamento;
+  const AddLancamentoPage({super.key, this.lancamento});
 
   @override
   State<AddLancamentoPage> createState() => _AddLancamentoPageState();
 }
 
 class _AddLancamentoPageState extends State<AddLancamentoPage> {
-  final TextEditingController descricaoCtrl = TextEditingController();
-  final TextEditingController valorCtrl = TextEditingController();
+  late TextEditingController descricaoCtrl;
+  late TextEditingController valorCtrl;
 
   String categoriaSelecionada = 'Comida';
   String tipoSelecionado = 'Despesa';
@@ -310,9 +368,19 @@ class _AddLancamentoPageState extends State<AddLancamentoPage> {
   final tipos = ['Despesa', 'Receita'];
 
   @override
+  void initState() {
+    super.initState();
+    descricaoCtrl = TextEditingController(text: widget.lancamento?['descricao'] ?? '');
+    double valor = widget.lancamento?['valor'] ?? 0.0;
+    valorCtrl = TextEditingController(text: valor.toString());
+    categoriaSelecionada = widget.lancamento?['categoria'] ?? 'Comida';
+    tipoSelecionado = widget.lancamento?['tipo'] ?? 'Despesa';
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Adicionar Lançamento')),
+      appBar: AppBar(title: Text(widget.lancamento == null ? 'Adicionar Lançamento' : 'Editar Lançamento')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -328,36 +396,24 @@ class _AddLancamentoPageState extends State<AddLancamentoPage> {
               decoration: const InputDecoration(labelText: 'Valor'),
             ),
             const SizedBox(height: 12),
-
             DropdownButtonFormField<String>(
-              value: tipoSelecionado,
-              items: tipos
-                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                  .toList(),
+              initialValue: tipoSelecionado,
+              items: tipos.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
               onChanged: (v) => setState(() => tipoSelecionado = v ?? 'Despesa'),
               decoration: const InputDecoration(labelText: 'Tipo'),
             ),
-
             const SizedBox(height: 12),
-
             DropdownButtonFormField<String>(
-              value: categoriaSelecionada,
-              items: categorias
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
+              initialValue: categoriaSelecionada,
+              items: categorias.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
               onChanged: (v) => setState(() => categoriaSelecionada = v ?? 'Comida'),
               decoration: const InputDecoration(labelText: 'Categoria'),
             ),
-
             const SizedBox(height: 20),
-
             ElevatedButton(
               onPressed: () {
-                double valor =
-                    double.tryParse(valorCtrl.text.replaceAll(',', '.')) ?? 0.0;
-
+                double valor = double.tryParse(valorCtrl.text.replaceAll(',', '.')) ?? 0.0;
                 if (tipoSelecionado == 'Despesa') valor = -valor;
-
                 Navigator.pop(context, {
                   'descricao': descricaoCtrl.text,
                   'valor': valor,
@@ -373,4 +429,3 @@ class _AddLancamentoPageState extends State<AddLancamentoPage> {
     );
   }
 }
-// acabou
