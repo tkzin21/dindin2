@@ -15,10 +15,7 @@ class DinDinApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'DinDin',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: const SplashScreen(),
     );
   }
@@ -49,20 +46,13 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFF00C9FF),
-              Color(0xFF92FE9D),
-            ],
+            colors: [Color(0xFF00C9FF), Color(0xFF92FE9D)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
         child: Center(
-          child: Image.asset(
-            'assets/logo.png',
-            width: 150,
-            height: 150,
-          ),
+          child: Image.asset('assets/logo.png', width: 150, height: 150),
         ),
       ),
     );
@@ -84,7 +74,14 @@ class _HomePageState extends State<HomePage> {
   final List<Map<String, dynamic>> lancamentos = [];
 
   String filtroCategoria = 'Todas';
-  final categorias = ['Todas', 'Comida', 'Transporte', 'Lazer', 'Saúde', 'Outros'];
+  final categorias = [
+    'Todas',
+    'Comida',
+    'Transporte',
+    'Lazer',
+    'Saúde',
+    'Outros',
+  ];
 
   String tipoGrafico = 'Pizza';
   final tiposGraficos = ['Pizza', 'Barra', 'Linha'];
@@ -198,10 +195,14 @@ class _HomePageState extends State<HomePage> {
                 ),
                 Column(
                   children: [
-                    Text("Receitas: R\$ ${totalReceitas.toStringAsFixed(2)}",
-                        style: const TextStyle(color: Colors.green)),
-                    Text("Despesas: R\$ ${totalDespesas.toStringAsFixed(2)}",
-                        style: const TextStyle(color: Colors.red)),
+                    Text(
+                      "Receitas: R\$ ${totalReceitas.toStringAsFixed(2)}",
+                      style: const TextStyle(color: Colors.green),
+                    ),
+                    Text(
+                      "Despesas: R\$ ${totalDespesas.toStringAsFixed(2)}",
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ],
                 ),
               ],
@@ -220,7 +221,9 @@ class _HomePageState extends State<HomePage> {
                         .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                         .toList(),
                     onChanged: (v) => setState(() => filtroCategoria = v!),
-                    decoration: const InputDecoration(labelText: 'Filtrar por categoria'),
+                    decoration: const InputDecoration(
+                      labelText: 'Filtrar por categoria',
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -262,11 +265,14 @@ class _HomePageState extends State<HomePage> {
                       return ListTile(
                         title: Text(l['descricao']),
                         subtitle: Text(
-                            'Categoria: ${l['categoria']}  |  ${l['tipo']} | ${l['data']}'),
+                          'Categoria: ${l['categoria']}  |  ${l['tipo']} | ${l['data']}',
+                        ),
                         leading: Text(
                           'R\$ ${(l['valor']).toStringAsFixed(2)}',
                           style: TextStyle(
-                            color: (l['valor']) >= 0 ? Colors.green : Colors.red,
+                            color: (l['valor']) >= 0
+                                ? Colors.green
+                                : Colors.red,
                           ),
                         ),
                         trailing: Row(
@@ -278,9 +284,8 @@ class _HomePageState extends State<HomePage> {
                                 final edit = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => AddLancamentoPage(
-                                      lancamento: l,
-                                    ),
+                                    builder: (_) =>
+                                        AddLancamentoPage(lancamento: l),
                                   ),
                                 );
                                 if (edit != null) {
@@ -290,7 +295,8 @@ class _HomePageState extends State<HomePage> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _excluirLancamento(originalIndex),
+                              onPressed: () =>
+                                  _excluirLancamento(originalIndex),
                             ),
                           ],
                         ),
@@ -323,16 +329,43 @@ class _HomePageState extends State<HomePage> {
     final categoriasList = dados.keys.toList();
     final valores = dados.values.toList();
 
-    // --- Pizza ---
+    // PALETA DEFINIDA
+    const entradaColor = Color(0xFF2ECC71); // Verde Esmeralda
+    const saidaColor = Color(0xFFE74C3C); // Vermelho Coral
+
+    // Outras categorias fixas e bonitas
+    const Map<String, Color> palette = {
+      "Entrada": entradaColor,
+      "Saída": saidaColor,
+      "Comida": Color(0xFF3498DB), // Azul
+      "Transporte": Color(0xFFF1C40F), // Amarelo
+      "Lazer": Color(0xFF9B59B6), // Roxo
+      "Saúde": Color(0xFF1ABC9C), // Verde água
+      "Outros": Color(0xFF95A5A6), // Cinza
+    };
+
+    Color getColor(String categoria) {
+      return palette[categoria] ?? Colors.grey;
+    }
+
+    // ================================
+    // GRÁFICO DE PIZZA
+    // ================================
     if (tipoGrafico == 'Pizza') {
       return PieChart(
         PieChartData(
           sections: List.generate(dados.length, (i) {
+            final cat = categoriasList[i];
             return PieChartSectionData(
               value: valores[i],
-              title: categoriasList[i],
-              color: Colors.primaries[i % Colors.primaries.length],
+              title: cat,
+              color: getColor(cat), // <- cor definida bonitona
               radius: 60,
+              titleStyle: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
             );
           }),
           centerSpaceRadius: 30,
@@ -340,18 +373,22 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    // --- Barras ---
+    // ================================
+    // GRÁFICO DE BARRA
+    // ================================
     if (tipoGrafico == 'Barra') {
       return BarChart(
         BarChartData(
           barGroups: List.generate(dados.length, (i) {
+            final cat = categoriasList[i];
             return BarChartGroupData(
               x: i,
               barRods: [
                 BarChartRodData(
                   toY: valores[i],
-                  color: Colors.primaries[i % Colors.primaries.length],
-                )
+                  color: getColor(cat),
+                  width: 18,
+                ),
               ],
             );
           }),
@@ -359,7 +396,9 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    // --- Linha ---
+    // ================================
+    // GRÁFICO DE LINHA
+    // ================================
     return LineChart(
       LineChartData(
         lineBarsData: [
@@ -369,8 +408,13 @@ class _HomePageState extends State<HomePage> {
               (i) => FlSpot(i.toDouble(), valores[i]),
             ),
             isCurved: true,
-            barWidth: 3,
+            barWidth: 4,
+            color: const Color(0xFF2D3436), // cinza escuro moderno
             dotData: FlDotData(show: true),
+            belowBarData: BarAreaData(
+              show: true,
+              color: const Color(0xFF2D3436).withOpacity(0.15),
+            ),
           ),
         ],
       ),
@@ -401,15 +445,17 @@ class _AddLancamentoPageState extends State<AddLancamentoPage> {
   @override
   void initState() {
     super.initState();
-    descricaoCtrl = TextEditingController(text: widget.lancamento?['descricao'] ?? '');
+    descricaoCtrl = TextEditingController(
+      text: widget.lancamento?['descricao'] ?? '',
+    );
     valorCtrl = TextEditingController(
-        text: widget.lancamento?['valor']?.abs().toString() ?? '');
+      text: widget.lancamento?['valor']?.abs().toString() ?? '',
+    );
 
     categoriaSelecionada = widget.lancamento?['categoria'] ?? 'Comida';
 
     if (widget.lancamento != null) {
-      tipoSelecionado =
-          widget.lancamento!['valor'] >= 0 ? 'Entrada' : 'Saída';
+      tipoSelecionado = widget.lancamento!['valor'] >= 0 ? 'Entrada' : 'Saída';
     }
   }
 
@@ -417,8 +463,11 @@ class _AddLancamentoPageState extends State<AddLancamentoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(widget.lancamento == null ? 'Adicionar Lançamento' : 'Editar Lançamento'),
+        title: Text(
+          widget.lancamento == null
+              ? 'Adicionar Lançamento'
+              : 'Editar Lançamento',
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -441,7 +490,6 @@ class _AddLancamentoPageState extends State<AddLancamentoPage> {
             // ============================
             // RADIO TIPO
             // ============================
-
             const Text("Tipo", style: TextStyle(fontSize: 16)),
             Row(
               children: [
@@ -464,23 +512,25 @@ class _AddLancamentoPageState extends State<AddLancamentoPage> {
 
             const SizedBox(height: 12),
 
-            DropdownButtonFormField<String>(
-              value: categoriaSelecionada,
-              items: categorias
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
-              onChanged: (v) => setState(() => categoriaSelecionada = v!),
-              decoration: const InputDecoration(labelText: 'Categoria'),
-            ),
+            // Só mostra categoria se for SAÍDA
+            if (tipoSelecionado == "Saída")
+              DropdownButtonFormField<String>(
+                value: categoriaSelecionada,
+                items: categorias
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (v) => setState(() => categoriaSelecionada = v!),
+                decoration: const InputDecoration(labelText: 'Categoria'),
+              ),
 
             const SizedBox(height: 20),
 
             ElevatedButton(
               onPressed: () {
                 double valor =
-                    double.tryParse(valorCtrl.text.replaceAll(',', '.')) ??
-                        0.0;
+                    double.tryParse(valorCtrl.text.replaceAll(',', '.')) ?? 0.0;
 
+                // Entrada fica positiva | Saída fica negativa
                 if (tipoSelecionado == 'Saída') {
                   valor = -valor;
                 }
@@ -493,13 +543,15 @@ class _AddLancamentoPageState extends State<AddLancamentoPage> {
                 Navigator.pop(context, {
                   'descricao': descricaoCtrl.text,
                   'valor': valor,
-                  'categoria': categoriaSelecionada,
+                  'categoria': tipoSelecionado == "Entrada"
+                      ? "Entrada" // <-- Categoria automática!
+                      : categoriaSelecionada,
                   'tipo': tipoSelecionado,
                   'data': dataFormatada,
                 });
               },
               child: const Text('Salvar'),
-            )
+            ),
           ],
         ),
       ),
